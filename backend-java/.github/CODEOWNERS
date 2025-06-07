@@ -1,0 +1,30 @@
+# Mantenedores globais do projeto
+* @team/tech-leads
+
+# Arquivos de configuração e build
+*.gradle @team/tech-leads
+build.gradle @team/tech-leads
+settings.gradle @team/tech-leads
+.github/ @team/tech-leads
+docker/ @team/tech-leads
+
+# Módulo de produtos
+/src/main/java/com/app/core/api/product/ @team/product-team
+
+# Módulo de usuários
+/src/main/java/com/app/core/api/user/ @team/user-team
+
+# Módulo de pedidos
+/src/main/java/com/app/core/api/order/ @team/order-team
+
+# Módulo de pagamentos
+/src/main/java/com/app/core/api/payment/ @team/payment-team
+
+# Código compartilhado
+/src/main/java/com/app/core/api/shared/ @team/tech-leads
+
+# Migrações de banco de dados
+/src/main/resources/db/ @team/db-team
+
+# Documentação
+/docs/ @team/tech-leads

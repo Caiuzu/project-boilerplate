@@ -1,0 +1,121 @@
+.floatLabel {
+	height: 40px;
+	position: relative;
+
+	[class*='ant-input-number'] {
+		width: 100%;
+		height: 100%;
+	}
+
+	&:has(textarea) {
+		height: auto;
+	}
+
+	&.tag {
+		height: 100%;
+
+		> div[class*='ant-select'] {
+			height: 100%;
+
+			div[class*='ant-select-selector'] {
+				padding: 7px 8px 3px;
+			}
+
+			[class*='ant-select-arrow'] {
+				display: none;
+			}
+		}
+	}
+
+	@mixin input {
+		width: 100%;
+		font-size: 14px;
+		padding: 9px 16px 7px;
+	}
+
+	> [class*='ant-select'] {
+		width: 100%;
+		height: 40px;
+
+		[class*='ant-select-selection-overflow'] {
+			margin-top: -1px;
+
+			[class*='ant-select-selection-overflow-item'] {
+				> [class*='ant-select-selection-item'] {
+					color: #005aaf;
+					border-radius: 8px;
+					border: 1px solid #005aaf;
+					background-color: transparent;
+
+					svg {
+						fill: #005aaf;
+					}
+				}
+			}
+		}
+	}
+
+	> [class*='ant-picker'],
+	> [class*='ant-select'] > div[class*='ant-select-selector'] {
+		@include input;
+	}
+
+	input,
+	[class*='ant-input-affix-wrapper'] {
+		@include input;
+	}
+
+	input[disabled][class*='ant-input-disabled'],
+	span[class*='ant-input-affix-wrapper-disabled'],
+	span[class*='ant-input-affix-wrapper-disabled']:hover:not([disabled]) {
+		color: #72767e;
+		border-color: #d6d7da;
+		background-color: #f2f2f3;
+
+		& + .label {
+			background-color: #f2f2f3;
+		}
+	}
+
+	.label {
+		height: 10px;
+		font-weight: normal;
+		position: absolute;
+		pointer-events: none;
+		left: 17px;
+		top: 13px;
+		z-index: 10;
+		display: flex;
+		align-items: center;
+		transition: 0.2s ease all;
+
+		&.asLabel {
+			top: -5px;
+			padding: 0 4px;
+			font-size: 12px;
+			background: white;
+			margin-left: -4px;
+		}
+
+		span {
+			margin-left: 4px;
+		}
+
+		.textDanger {
+			color: #eb0744;
+		}
+	}
+
+	.asPlaceholder {
+		top: 15px;
+		color: #d6d7da;
+
+		&.withPrefix {
+			margin-left: 26px;
+		}
+	}
+
+	[class*='ant-select-selection-placeholder'] {
+		display: none;
+	}
+}

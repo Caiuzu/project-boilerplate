@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: hackathon_postgres
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}       # Usa variável do .env ou padrão postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres} # Usa variável do .env ou padrão postgres
+      POSTGRES_DB: ${DB_NAME:-hackathondb}         # Usa variável do .env ou padrão hackathondb
+    ports:
+      - "${DB_PORT:-5432}:5432" # Usa variável do .env ou padrão 5432
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: hktn-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - app_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Opcional: Adicionar a aplicação Go ao Docker Compose mais tarde
+  # app:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   container_name: hackathon_app
+  #   ports:
+  #     - "${APP_PORT:-8888}:${APP_PORT:-8888}"
+  #   depends_on:
+  #     - postgres
+  #   env_file:
+  #     - .env
+  #   networks:
+  #     - app_network
+
+volumes:
+  postgres_data: # Volume persistente para os dados do Postgres
+  redis_data:
+
+networks:
+  app_network:
+    driver: bridge 

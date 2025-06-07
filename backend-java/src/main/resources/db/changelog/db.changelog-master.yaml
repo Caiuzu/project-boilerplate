@@ -1,0 +1,67 @@
+databaseChangeLog:
+  - property:
+      name: now
+      value: current_timestamp
+      dbms: postgresql
+
+  # Clear checksums
+  - changeSet:
+      id: clearChecksums
+      author: system
+      changes:
+        - tagDatabase:
+            tag: clear-checksums
+      labels: clear-checksums
+
+  - include:
+      file: shared/00-init-schema.sql
+      relativeToChangelogFile: true
+
+  # Spring Modulith
+  - include:
+      file: shared/01-modulith-tables.sql
+      relativeToChangelogFile: true
+
+  # User module
+  - include:
+      file: modules/user/01-user-tables.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/user/02-user-indexes.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/user/03-user-seed.sql
+      relativeToChangelogFile: true
+
+  # Catalog module
+  - include:
+      file: modules/catalog/01-catalog-tables.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/catalog/02-catalog-indexes.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/catalog/03-catalog-seed.sql
+      relativeToChangelogFile: true
+
+  # Order module
+  - include:
+      file: modules/order/01-order-tables.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/order/02-order-indexes.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/order/03-order-seed.sql
+      relativeToChangelogFile: true
+
+  # Payment module
+  - include:
+      file: modules/payment/01-payment-tables.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/payment/02-payment-indexes.sql
+      relativeToChangelogFile: true
+  - include:
+      file: modules/payment/03-payment-seed.sql
+      relativeToChangelogFile: true

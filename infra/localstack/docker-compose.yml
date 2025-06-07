@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:latest
+    container_name: localstack_main
+    ports:
+      - "4566:4566"            # LocalStack Edge Proxy (main port)
+      - "4510-4559:4510-4559"  # External services port range
+    environment:
+      - SERVICES=s3,sqs,sns,dynamodb,lambda,iam,sts # Defina os serviços que você precisa
+      - DEFAULT_REGION=us-east-1
+      - EAGER_SERVICE_LOADING=1
+      - LS_LOG=info # Pode ser debug para mais detalhes
+      # - DEBUG=1 # Descomente para logs de debug mais verbosos do LocalStack
+    volumes:
+      - "${LOCALSTACK_VOLUME_DIR:-./localstack_data}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      # - "./localstack_init_scripts:/etc/localstack/init/ready.d" # Para scripts de inicialização
+    # networks:
+    #   - local_network
+
+# networks:
+#   local_network:
+#     driver: bridge 

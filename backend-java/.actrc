@@ -1,0 +1,4 @@
+-P ubuntu-latest=nektos/act-environments-ubuntu:18.04
+--bind
+-P self-hosted=catthehacker/ubuntu:full-latest
+--artifact-server-path /tmp/artifacts 

@@ -1,0 +1,38 @@
+{
+	"extends": ["next/core-web-vitals"],
+	"plugins": ["perfectionist", "prettier"],
+	"rules": {
+		"prettier/prettier": "error",
+		"react/display-name": "off",
+		"react-hooks/exhaustive-deps": "off",
+		"perfectionist/sort-maps": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-enums": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-exports": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-objects": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-jsx-props": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-interfaces": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-union-types": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-object-types": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-named-imports": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-named-exports": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-array-includes": ["error", { "type": "line-length", "order": "asc" }],
+		"perfectionist/sort-imports": [
+			"error",
+			{
+				"type": "line-length",
+				"order": "asc",
+				"groups": ["type", ["react", "builtin", "external"], ["internal", "parent", "sibling", "index"]],
+				"newlinesBetween": "always",
+				"customGroups": {
+					"value": {
+						"react": ["^react$", "^react-."],
+						"lodash": "lodash"
+					},
+					"type": {
+						"react": ["^react$", "^react-."]
+					}
+				}
+			}
+		]
+	}
+}

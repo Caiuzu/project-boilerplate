@@ -1,0 +1,66 @@
+.fileDownload {
+	gap: 1rem;
+	color: #fff;
+	display: flex;
+	padding: 12px;
+	max-width: 350px;
+	position: relative;
+	border-radius: 8px;
+	width: fit-content;
+	align-items: center;
+	background-color: #1a1a1a;
+	border: 1px solid #363636;
+
+	> a {
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		z-index: 5;
+		width: 100%;
+		height: 100%;
+		display: block;
+		position: absolute;
+		border-radius: 8px;
+
+		&:hover {
+			filter: contrast(1.2);
+			background-color: #2a2a2a27;
+		}
+	}
+}
+
+.fileIcon {
+	display: flex;
+	flex-shrink: 0;
+	color: #4d9fff;
+	align-items: center;
+	justify-content: center;
+}
+
+.fileInfo {
+	gap: 0.25rem;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+
+.fileName {
+	color: #fff;
+	font-weight: 500;
+	overflow: hidden;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+}
+
+.fileDetails {
+	gap: 0.5rem;
+	display: flex;
+	color: #808080;
+	align-items: center;
+	font-size: 0.875rem;
+}
+
+.bullet {
+	color: #4d4d4d;
+}

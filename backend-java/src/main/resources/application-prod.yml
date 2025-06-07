@@ -1,0 +1,74 @@
+# Configuração do JPA para produção
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        ddl-auto: validate
+        format_sql: false
+
+  # Configurações de banco de dados
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  # SpringDoc
+  springdoc:
+    api-docs:
+      enabled: true
+    swagger-ui:
+      enabled: true
+
+  # Liquibase (contexto exclusivo de produção)
+  liquibase:
+    contexts: prod
+
+  # Configurações do servidor
+  server:
+    tomcat:
+      max-threads: 200
+      min-spare-threads: 20
+    port: ${SERVER_PORT}
+    compression:
+      enabled: true
+      mime-types: application/json,application/xml,text/html,text/plain
+      min-response-size: 2048
+
+# Actuator (endpoints restritos)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+    endpoint:
+      health:
+        show-details: when_authorized
+
+# Logging (níveis reduzidos)
+logging:
+  level:
+    root: WARN
+    com.app: INFO
+    org.springframework.web: WARN
+    org.hibernate: WARN
+
+# JWT
+jwt:
+  secret_key: ${JWT_SECRET}
+  expiration: 3600
+
+# Mercado Pago
+mercado-pago:
+  base-url: ${MERCADO_PAGO_BASE_URL}
+  token: ${MERCADO_PAGO_TOKEN}
+  user-id: ${MERCADO_PAGO_USER_ID}
+  pos-id: ${MERCADO_PAGO_POS_ID}
+  notification-url: ${MERCADO_PAGO_NOTIFICATION_URL}
+
+# Azure
+azure:
+  storage:
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+    container-name: ${AZURE_STORAGE_CONTAINER_NAME}

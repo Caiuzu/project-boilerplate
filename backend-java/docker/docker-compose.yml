@@ -1,0 +1,82 @@
+version: "3.8"
+
+services:
+  # Aplicação principal
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: app-core-api
+    ports:
+      - "80:${SERVER_PORT}"
+    env_file:
+      - .env
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:${SERVER_PORT}/api/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - app-network
+    # Limite de recursos para evitar consumo excessivo
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+
+  # Banco de dados PosgreSQL
+  db:
+    image: postgres:16-alpine
+    container_name: app-core-db
+    ports:
+      - "${DB_PORT}:${DB_PORT}"
+    env_file:
+      - .env
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    command: >
+      -c shared_buffers=256MB
+      -c max_connections=200
+      -c effective_cache_size=512MB
+      -c maintenance_work_mem=64MB
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
+      -c work_mem=4MB
+      -c min_wal_size=1GB
+      -c max_wal_size=4GB
+      -c wal_level=logical
+    networks:
+      - app-network
+
+  # Ferramenta para gerenciar banco de dados (aepnas local)
+  adminer:
+    image: adminer:latest
+    container_name: app-core-adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+    networks:
+      - app-network
+    restart: unless-stopped
+    profiles:
+      - local
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

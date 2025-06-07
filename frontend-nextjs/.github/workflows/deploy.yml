@@ -1,0 +1,23 @@
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Create .env file
+        run: |
+          echo "SERVER_URL=https://api.kit.com" > .env
+          echo "NEXT_PUBLIC_APP_URL=https://beta.kit.com" >> .env
+
+      - name: Deploy to Server
+        run: |
+          docker-compose up -d --build

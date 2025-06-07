@@ -1,0 +1,150 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.5'
+	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.liquibase.gradle' version '2.2.0'
+	id 'jacoco'
+}
+
+group = 'com.app'
+version = '0.0.1-SNAPSHOT'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(21)
+	}
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+	liquibaseRuntime {
+		extendsFrom implementation
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+ext {
+	set('mapstructVersion', "1.5.5.Final")
+	set('lombokVersion', "1.18.28")
+	set('postgresVersion', "42.6.0")
+	set('springdocVersion', "2.8.4")
+	set('jjwtVersion', "0.11.5")
+	set('picoli', "4.7.5")
+    set('springModulithVersion', "1.3.5")
+    set('retrofit', "3.0.0")
+    set('converterGson', "3.0.0")
+    set('azureBlobSdk', "12.25.0")
+}
+
+dependencies {
+	
+	// Spring Boot
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jdbc'
+	implementation 'org.springframework.boot:spring-boot-starter-data-rest'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-resource-server'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	
+	// Liquibase para migrações de banco de dados
+	implementation 'org.liquibase:liquibase-core'
+
+	// Spring Modulith
+	implementation 'org.springframework.modulith:spring-modulith-starter-core'
+	implementation 'org.springframework.modulith:spring-modulith-starter-jdbc'
+	implementation 'org.springframework.modulith:spring-modulith-starter-jpa'
+	implementation 'org.springframework.session:spring-session-core'
+
+	// Spring Modulith Actuator e Observability
+	runtimeOnly 'org.springframework.modulith:spring-modulith-actuator'
+    runtimeOnly 'org.springframework.modulith:spring-modulith-observability'
+
+	// PostgreSQL driver
+	runtimeOnly 'org.postgresql:postgresql'
+	
+	// Lombok e MapStruct
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	implementation "org.mapstruct:mapstruct:${mapstructVersion}"
+	annotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
+	
+	// SpringDoc (Swagger/OpenAPI)
+	implementation "org.springdoc:springdoc-openapi-starter-webmvc-ui:${springdocVersion}"
+    implementation "org.springdoc:springdoc-openapi-starter-webmvc-api:${springdocVersion}"
+
+	// JWT
+	implementation "io.jsonwebtoken:jjwt-api:${jjwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-impl:${jjwtVersion}"
+	runtimeOnly "io.jsonwebtoken:jjwt-jackson:${jjwtVersion}"
+	
+	// Testes
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.modulith:spring-modulith-starter-test'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	
+	// Liquibase runtime dependencies
+	liquibaseRuntime 'org.liquibase:liquibase-core'
+	liquibaseRuntime 'org.postgresql:postgresql'
+	liquibaseRuntime "info.picocli:picocli:${picoli}"
+
+	// Retrofit
+	implementation "com.squareup.retrofit2:retrofit:${retrofit}"
+	implementation "com.squareup.retrofit2:converter-gson:${converterGson}"
+
+	// Azure Storage Blob
+	dependencies {
+		implementation("com.azure:azure-storage-blob:${azureBlobSdk}")
+	}
+
+}
+
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.modulith:spring-modulith-bom:${springModulithVersion}"
+	}
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+// Configuração do Liquibase para usar o arquivo de changelog
+liquibase {
+	activities {
+		main {
+			changeLogFile 'src/main/resources/db/changelog/db.changelog-master.yaml'
+			url 'jdbc:postgresql://localhost:', System.getenv('DB_PORT') ?: '5432', '/app'
+			username System.getenv('DB_USER') ?: 'postgres'
+			password System.getenv('DB_PASSWORD') ?: 'postgres'
+		}
+	}
+	runList = 'main'
+}
+
+// Tarefa para copiar o driver PostgreSQL para uso em testes externos
+task extractDependencies(type: Copy) {
+	from configurations.runtimeClasspath
+	include '**/postgresql*.jar'
+	into "${buildDir}/dependencies"
+	rename { filename -> 'postgresql.jar' }
+}
+
+// Adicionar a extração de dependências ao build
+tasks.named('build') {
+	dependsOn extractDependencies
+}

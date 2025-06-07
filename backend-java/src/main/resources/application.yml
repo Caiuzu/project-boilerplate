@@ -1,0 +1,95 @@
+spring:
+  application:
+    name: app-core-api
+
+  # Perfil padrão (development)
+  profiles:
+    active: local
+
+  # Configurações de banco de dados
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+
+  # Spring Modulith
+  autoconfigure:
+    exclude:
+      - org.springframework.modulith.events.jdbc.JdbcEventPublicationAutoConfiguration
+
+  # JPA / Hibernate
+  jpa:
+    hibernate:
+      ddl-auto: none
+      properties:
+        hibernate:
+          dialect: org.hibernate.dialect.PostgreSQLDialect
+          format_sql: true
+          jdbc:
+            time_zone: UTC
+      show-sql: false
+
+  # Liquibase
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
+    contexts: prod # Contexto padrão é prod (será sobrescrito em local)
+
+  # SpringDoc
+  springdoc:
+    swagger-ui:
+      path: /swagger-ui.html
+      operations-sorter: alpha
+      tags-sorter: alpha
+      disable-swagger-default-url: true
+      doc-expansion: none
+      show-actuator: true
+
+  # Upload de arquivos
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 15MB
+
+# Configurações de logging
+logging:
+  level:
+    root: INFO
+    com.app.core.api: INFO
+    org.springframework.web: INFO
+    org.hibernate.SQL: INFO
+    org.hibernate.type.descriptor.sql.BasicBinder: INFO
+    org.springdoc: DEBUG
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+  compression:
+    enabled: true
+  error:
+    include-message: always
+    include-binding-errors: always
+
+# JWT Configuration
+jwt:
+  secret_key: ${JWT_SECRET}
+  expiration: 3600
+
+# Mercado Pago Configuration
+mercado-pago:
+  base-url: ${MERCADO_PAGO_BASE_URL}
+  token: ${MERCADO_PAGO_TOKEN}
+  user-id: ${MERCADO_PAGO_USER_ID}
+  pos-id: ${MERCADO_PAGO_POS_ID}
+  notification-url: ${MERCADO_PAGO_NOTIFICATION_URL}
+
+# Azure Storage Configuration
+azure:
+  storage:
+    connection-string: ${AZURE_STORAGE_CONNECTION_STRING}
+    container-name: ${AZURE_STORAGE_CONTAINER_NAME}

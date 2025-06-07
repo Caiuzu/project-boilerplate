@@ -1,0 +1,9 @@
+.formItem {
+	&[class*='ant-form-item'] {
+		margin-bottom: 28px;
+	}
+
+	[class*='ant-form-item-explain-error'] {
+		margin-bottom: 6px;
+	}
+}

@@ -1,0 +1,68 @@
+# Binários e arquivos compilados
+/bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Arquivos de ambiente
+.env
+.env.*
+!.env.example
+
+# Arquivos de IDE e editores
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Arquivos de dependências
+/vendor/
+/go.sum
+
+# Arquivos de log
+*.log
+logs/
+
+# Arquivos temporários
+tmp/
+temp/
+
+# Arquivos de cobertura de testes
+coverage.txt
+coverage.html
+*.cover
+
+# Arquivos de build do Swagger
+/docs/
+
+# Arquivos de migração (opcional, descomente se não quiser versionar)
+# /internal/database/migrations/
+
+# Arquivos de cache
+.cache/
+__pycache__/
+*.pyc
+
+# Arquivos de debug
+debug
+debug.test
+
+# Arquivos de configuração local
+config.local.yaml
+config.local.json
+config.local.toml
+
+# Arquivos de backup
+*.bak
+*.backup
+*~
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db 

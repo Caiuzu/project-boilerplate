@@ -1,0 +1,46 @@
+{
+  "name": "dev-kit",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^5.6.1",
+    "@ant-design/nextjs-registry": "^1.0.2",
+    "@ant-design/v5-patch-for-react-19": "^1.0.3",
+    "@next/bundle-analyzer": "^15.1.7",
+    "@phosphor-icons/react": "^2.1.7",
+    "antd": "^5.24.1",
+    "cookies-next": "^5.1.0",
+    "critters": "^0.0.25",
+    "date-fns": "^4.1.0",
+    "imask": "^7.6.1",
+    "isomorphic-dompurify": "^2.21.0",
+    "jose": "^5.10.0",
+    "mysql2": "^3.12.0",
+    "next": "15.1.6",
+    "next-intl": "^3.26.4",
+    "nextjs-toploader": "^3.7.15",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "rxjs": "^7.8.1",
+    "sass": "^1.85.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4",
+    "@types/nprogress": "^0.2.3",
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "eslint": "9.20.0",
+    "eslint-config-next": "15.1.6",
+    "eslint-config-prettier": "10.0.1",
+    "eslint-plugin-perfectionist": "4.8.0",
+    "eslint-plugin-prettier": "5.2.3",
+    "prettier": "3.5.0",
+    "typescript": "^5.7.3"
+  }
+}

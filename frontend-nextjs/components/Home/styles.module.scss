@@ -1,0 +1,24 @@
+.boardContainer {
+	width: 100%;
+	display: flex;
+
+	.board {
+		width: 100%;
+
+		> nav {
+			margin-bottom: 16px;
+		}
+
+		.boardCategory {
+			margin-bottom: 24px;
+
+			> h2 {
+				@include categoryTitle;
+			}
+		}
+	}
+
+	.sidebar {
+		padding-left: 16px;
+	}
+}

@@ -1,0 +1,11 @@
+apiVersion: v2
+name: backend-java
+description: A Helm chart for Spring Boot backend
+version: 0.1.0 # Versão do Chart
+appVersion: "1.0.0" # Versão da aplicação
+
+# Dependências (se houver)
+# dependencies:
+#   - name: postgresql
+#     version: "10.x.x"
+#     repository: "https://charts.bitnami.com/bitnami" 

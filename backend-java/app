@@ -1,0 +1,224 @@
+#!/bin/bash
+
+# Script centralizador para o projeto App Core API
+# Uso: ./app [comando] [opções]
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPTS_DIR="$SCRIPT_DIR/scripts"
+ACT_DIR="$SCRIPT_DIR/docker/act"
+
+# Função para exibir ajuda
+show_help() {
+  echo "App Core API - CLI de gerenciamento"
+  echo
+  echo "Uso: ./app [comando] [opções]"
+  echo
+  echo "Comandos disponíveis:"
+  echo "  start:all        Inicia toda a infraestrutura e a aplicação"
+  echo "  start:infra      Inicia apenas a infraestrutura (banco)"
+  echo "  start:app        Inicia apenas a aplicação"
+  echo "  stop:all         Para todos os serviços"
+  echo "  stop:infra       Para apenas a infraestrutura"
+  echo "  stop:app         Para apenas a aplicação"
+  echo "  restart:all      Reinicia todos os serviços"
+  echo "  restart:app      Reinicia apenas a aplicação"
+  echo "  db:up            Aplica migrações do banco de dados"
+  echo "  db:reset         Reseta o banco de dados (cuidado!)"
+  echo "  run:action       Executa GitHub Actions localmente usando Act"
+  echo "  run:workflow     Executa um workflow específico do GitHub Actions"
+  echo "  logs             Exibe logs dos containers"
+  echo "  logs:app         Exibe logs apenas da aplicação"
+  echo "  logs:db          Exibe logs apenas do banco de dados"
+  echo "  status           Exibe status dos containers"
+  echo "  clean            Remove containers, imagens e volumes não utilizados"
+  echo "  help             Exibe esta mensagem de ajuda"
+  echo
+  echo "Opções:"
+  echo "  --build, -b      Reconstrói as imagens antes de iniciar"
+  echo "  --force, -f      Força a execução sem confirmação"
+  echo
+  echo "Exemplos:"
+  echo "  ./app start:all --build    Inicia tudo reconstruindo as imagens"
+  echo "  ./app stop:all             Para todos os serviços"
+  echo "  ./app db:up                Aplica migrações do banco"
+  echo "  ./app run:action           Executa todos os GitHub Actions localmente"
+  echo "  ./app run:workflow .github/workflows/ci-cd.yml  Executa um workflow específico"
+}
+
+# Verificar se o Docker está rodando
+check_docker() {
+  docker info &>/dev/null
+  return $?
+}
+
+if ! check_docker; then
+  echo "ERRO: O Docker não está rodando."
+  echo "Por favor, inicie o Docker Desktop e tente novamente."
+  exit 1
+fi
+
+# Verificar se o comando foi fornecido
+if [ $# -eq 0 ]; then
+  show_help
+  exit 1
+fi
+
+# Processar opções
+BUILD_FLAG=""
+FORCE_FLAG=""
+
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --build|-b)
+      BUILD_FLAG="--build"
+      shift
+      ;;
+    --force|-f)
+      FORCE_FLAG="--force"
+      shift
+      ;;
+    *)
+      COMMAND="$1"
+      shift
+      ;;
+  esac
+done
+
+# Executar o comando apropriado
+case "$COMMAND" in
+  start:all)
+    echo "Iniciando toda a infraestrutura e aplicação..."
+    "$SCRIPTS_DIR/infra-up.sh" $FORCE_FLAG
+    "$SCRIPTS_DIR/app-up.sh" $BUILD_FLAG
+    # Verificar se a rede fastapp-network existe, se não, criar
+    if ! docker network ls | grep -q fastapp-network; then
+      echo "Criando rede compartilhada fastapp-network..."
+      docker network create fastapp-network
+    fi
+    ;;
+  start:infra)
+    echo "Iniciando apenas a infraestrutura..."
+    "$SCRIPTS_DIR/infra-up.sh" $FORCE_FLAG
+    ;;
+  start:app)
+    echo "Iniciando apenas a aplicação..."
+    "$SCRIPTS_DIR/app-up.sh" $BUILD_FLAG
+    ;;
+  stop:all)
+    echo "Parando todos os serviços..."
+    "$SCRIPTS_DIR/app-down.sh"
+    "$SCRIPTS_DIR/infra-down.sh"
+    ;;
+  stop:infra)
+    echo "Parando apenas a infraestrutura..."
+    "$SCRIPTS_DIR/infra-down.sh"
+    ;;
+  stop:app)
+    echo "Parando apenas a aplicação..."
+    "$SCRIPTS_DIR/app-down.sh"
+    ;;
+  restart:all)
+    echo "Reiniciando todos os serviços..."
+    "$SCRIPTS_DIR/app-restart.sh" $BUILD_FLAG
+    "$SCRIPTS_DIR/infra-restart.sh" $FORCE_FLAG
+    ;;
+  restart:app)
+    echo "Reiniciando apenas a aplicação..."
+    "$SCRIPTS_DIR/app-restart.sh" $BUILD_FLAG
+    ;;
+  db:up)
+    echo "Aplicando migrações do banco de dados..."
+    "$SCRIPTS_DIR/apply-migrations.sh"
+    ;;
+  db:reset)
+    if [ "$FORCE_FLAG" != "--force" ]; then
+      read -p "ATENÇÃO: Isso irá resetar o banco de dados. Tem certeza? (s/n): " resposta
+      if [[ ! "$resposta" =~ ^[Ss]$ ]]; then
+        echo "Operação cancelada."
+        exit 0
+      fi
+    fi
+    echo "Resetando o banco de dados..."
+    "$SCRIPTS_DIR/reset-db.sh"
+    ;;
+  run:action)
+    echo "Executando GitHub Actions localmente..."
+    # Verificar se o Act está instalado
+    if ! command -v act &> /dev/null; then
+      echo "ERRO: Act não está instalado."
+      echo "Instale-o seguindo as instruções em: https://github.com/nektos/act"
+      exit 1
+    fi
+    
+    # Verificar se há arquivo de secrets
+    if [ -f "$ACT_DIR/secrets.env" ]; then
+      echo "Usando secrets do arquivo $ACT_DIR/secrets.env"
+      act --secret-file "$ACT_DIR/secrets.env" "$@"
+    else
+      echo "Arquivo de secrets não encontrado. Usando configuração padrão."
+      echo "Para configurar secrets, crie um arquivo em $ACT_DIR/secrets.env"
+      act "$@"
+    fi
+    ;;
+  run:workflow)
+    echo "Executando workflow específico do GitHub Actions..."
+    # Verificar se o Act está instalado
+    if ! command -v act &> /dev/null; then
+      echo "ERRO: Act não está instalado."
+      echo "Instale-o seguindo as instruções em: https://github.com/nektos/act"
+      exit 1
+    fi
+    
+    # Verificar se o workflow foi especificado
+    if [ -z "$1" ]; then
+      echo "ERRO: Especifique o workflow a ser executado."
+      echo "Exemplo: ./app run:workflow .github/workflows/ci-cd.yml"
+      exit 1
+    fi
+    
+    # Verificar se há arquivo de secrets
+    if [ -f "$ACT_DIR/secrets.env" ]; then
+      echo "Usando secrets do arquivo $ACT_DIR/secrets.env"
+      act workflow_dispatch -W "$1" --secret-file "$ACT_DIR/secrets.env" "${@:2}"
+    else
+      echo "Arquivo de secrets não encontrado. Usando configuração padrão."
+      echo "Para configurar secrets, crie um arquivo em $ACT_DIR/secrets.env"
+      act workflow_dispatch -W "$1" "${@:2}"
+    fi
+    ;;
+  logs)
+    echo "Exibindo logs de todos os containers..."
+    cd "$SCRIPT_DIR/docker" && docker-compose logs -f
+    ;;
+  logs:app)
+    echo "Exibindo logs da aplicação..."
+    cd "$SCRIPT_DIR/docker" && docker-compose logs -f app
+    ;;
+  logs:db)
+    echo "Exibindo logs do banco de dados..."
+    cd "$SCRIPT_DIR/docker" && docker-compose logs -f db
+    ;;
+  status)
+    echo "Status dos containers:"
+    cd "$SCRIPT_DIR/docker" && docker-compose ps
+    ;;
+  clean)
+    if [ "$FORCE_FLAG" != "--force" ]; then
+      read -p "ATENÇÃO: Isso irá remover containers, imagens e volumes não utilizados. Tem certeza? (s/n): " resposta
+      if [[ ! "$resposta" =~ ^[Ss]$ ]]; then
+        echo "Operação cancelada."
+        exit 0
+      fi
+    fi
+    echo "Limpando recursos Docker não utilizados..."
+    docker system prune -a --volumes
+    ;;
+  help)
+    show_help
+    ;;
+  *)
+    echo "ERRO: Comando desconhecido: $COMMAND"
+    echo "Use './app help' para ver os comandos disponíveis."
+    exit 1
+    ;;
+esac 
