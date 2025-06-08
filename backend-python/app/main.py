@@ -72,7 +72,7 @@ def invoke_bedrock_model(prompt, region, access_key, secret_key):
         "messages": [
             {"role": "user", "content": prompt}
         ],
-        "max_tokens": 512,
+        "max_tokens": 4096,
         "temperature": 0.2,
         "top_p": 1,
         "anthropic_version": "bedrock-2023-05-31"
@@ -302,11 +302,68 @@ async def finops_gpt(data: FinOpsRequest):
         contexto += f"Insight: {insight}\n"
     # Montar prompt
     prompt = (
-        "Você é um assistente FinOps especializado em nuvem AWS. Responda em PT-BR, de forma clara e objetiva.\n"
-        f"Pergunta do usuário: \"{data.message}\"\n"
-        f"Contexto de custos e recursos:\n{contexto}\n"
-        "Classifique sua resposta como um dos tipos: 'cost', 'alert', 'insight' ou 'dashboard'.\n"
-        "No final da resposta, escreva: [type: cost] (ou outro tipo)."
+        f"""
+Você é o <b>FinOpsGPT</b>, copiloto da plataforma <u>FOG — FinOps &amp; Observability Guardian</u>, especializado em ambientes AWS multicloud.
+Responda em <b>PT-BR</b>, de forma <i>clara</i>, <i>objetiva</i> e <b>sempre</b> em um <u>único bloco de HTML puro</u>, pronto para renderizar no navegador.
+
+<!-- ======= REGRAS DE FORMATAÇÃO ======= -->
+<ul style="display:none;">
+  <li>Use <b>apenas</b> tags HTML: div, h3, b, i, u, span, ul, li, table, tr, td, br, p, etc.</li>
+  <li>Jamais utilize Markdown ou quebras "n" — use <br/> ou outras tags.</li>
+  <li>Texto <b>nunca</b> deve ficar fora de tags; o marcador de tipo deve ser um comentário HTML.</li>
+  <li>Utilize CSS inline simples ou classes pré-existentes (ex.: <span class='llm-alert'>).</li>
+  <li>Seja visual e sucinto; cores de alto contraste (#e63946, #457b9d, #2a9d8f…).</li>
+</ul>
+
+<!-- ======= CONTEXTO DE NEGÓCIO ======= -->
+<p style="display:none;">
+  Metas FOG: reduzir 30% custos de observabilidade, detectar spans inúteis < 10 min, eliminar recursos zumbis.
+  Sempre ofereça recomendações práticas (ex.: lifecycle S3, migração Spot, reduzir nível de log).
+</p>
+
+<!-- ======= EXEMPLOS DE SAÍDA ======= -->
+<div style="display:none;">
+  <p><b style="color:#e63946;">⚠️ Alerta Ativo:</b><br/>
+     <span style="font-weight:600;">Gasto do serviço <span style="color:#f77f00;">S3</span> ultrapassou <u>15% da meta mensal</u>!</span>
+  </p>
+  <ul>
+    <li><b>Atual:</b> <span style="color:#457b9d;">R$ 3.750</span></li>
+    <li><b>Meta:</b> <span style="color:#2a9d8f;">R$ 3.200</span></li>
+  </ul>
+  <i>Recomendo revisar políticas de lifecycle e storage classes.</i>
+  <!-- type: alert -->
+</div>
+
+<div style="display:none;">
+  <h3>Resumo de Custos</h3>
+  <table style="width:100%; border-collapse:collapse;">
+    <tr style="background:#f8f9fa;">
+      <th style="padding:8px; text-align:left;">Serviço</th>
+      <th style="padding:8px; text-align:right;">Custo</th>
+      <th style="padding:8px; text-align:right;">% do Total</th>
+    </tr>
+    <tr><td><b>AWS CloudTrail</b></td><td style="text-align:right;">R$ 0,12</td><td style="text-align:right;">46,2%</td></tr>
+    <tr><td><b>Amazon Bedrock</b></td><td style="text-align:right;">R$ 0,08</td><td style="text-align:right;">30,8%</td></tr>
+    <tr><td><b>Amazon SageMaker</b></td><td style="text-align:right;">R$ 0,05</td><td style="text-align:right;">19,2%</td></tr>
+    <tr style="background:#f8f9fa;"><td><b>Total do Mês</b></td><td style="text-align:right;"><b>R$ 0,26</b></td><td style="text-align:right;">100%</td></tr>
+  </table>
+  <p style="margin-top:10px;"><i>Apesar do aumento percentual (563,8 %), o valor absoluto segue baixo, possivelmente por uso inicial.</i></p>
+  <!-- type: cost -->
+</div>
+
+<!-- ======= INSTRUÇÕES FINAIS ======= -->
+<p style="display:none;">
+  Classifique a resposta como: <b>cost</b>, <b>alert</b>, <b>insight</b> ou <b>dashboard</b>.
+  Insira <b>apenas um</b> comentário HTML no final indicando o tipo — ex.: <!- - type: cost -->.
+</p>
+
+<!-- ======= ENTRADA DINÂMICA ======= -->
+<h3 style="color:#1d3557;">Pergunta do usuário:</h3>
+<p style="font-size:1.1em; color:#222;">{data.message}</p>
+<p style="display:none;">Contexto:<br/>{contexto}</p>
+
+<p><b>Responda diretamente à pergunta acima, usando os dados e contexto fornecidos. Nunca ignore a pergunta do usuário.</b></p>
+"""
     )
     try:
         llm_response = invoke_bedrock_model(prompt, region, access_key, secret_key)
@@ -314,12 +371,12 @@ async def finops_gpt(data: FinOpsRequest):
         logging.error(f"Erro ao acessar Bedrock: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao acessar Bedrock: {str(e)}")
     # Extrair type
-    match = re.search(r"\[type:\s*(cost|alert|insight|dashboard)\]", llm_response, re.IGNORECASE)
+    match = re.search(r"<!-- type: (\w+) -->", llm_response, re.IGNORECASE)
     if match:
         type_ = match.group(1).lower()
         text = llm_response[:match.start()].strip()
     else:
-        type_ = None
+        type_ = "default"
         text = llm_response.strip()
     return FinOpsResponse(text=text, type=type_)
 
