@@ -1,7 +1,9 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 import uvicorn
 import os
+import boto3
+import json
 
 try:
     from openai import OpenAI
@@ -90,6 +92,53 @@ async def chat_huggingface(prompt: str, model: str = "gpt2"):
     pipe = pipeline("text-generation", model=model)
     result = pipe(prompt, max_length=100, num_return_sequences=1)
     return {"response": result[0]["generated_text"]}
+
+@app.post("/api/codereview", tags=["Code Review"])
+async def codereview(diff: UploadFile = File(...)):
+    """
+    Recebe um diff de PR do GitHub, estrutura o prompt e retorna análise da LLM (Amazon Bedrock).
+    """
+    diff_content = (await diff.read()).decode(errors="ignore")
+    diff_preview = diff_content[:2000]
+    prompt = (
+        "Você é um especialista em observabilidade e FinOps para ambientes multicloud em grandes bancos. "
+        "Analise apenas as alterações de LOGS no diff abaixo. Identifique desperdício, ruído, duplicidade, excesso de logs, spans inúteis e anti-padrões que aumentam custos ou dificultam o diagnóstico. "
+        "Sugira correções, padronizações e formas de reduzir custos de observabilidade. Seja objetivo, cite exemplos do diff e responda em PT-BR.\n\n"
+        f"DIFF DE LOGS:\n{diff_preview}\n\nResumo e recomendações:" 
+    )
+    # Configurações AWS Bedrock
+    region = os.getenv("AWS_BEDROCK_REGION")
+    access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
+    secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
+    if not (region and access_key and secret_key):
+        return {"review": "[PLACEHOLDER] AWS Bedrock não configurado. Defina AWS_BEDROCK_REGION, AWS_BEDROCK_ACCESS_KEY e AWS_BEDROCK_SECRET_KEY no ambiente.", "diff": diff_preview}
+    try:
+        bedrock = boto3.client(
+            service_name="bedrock-runtime",
+            region_name=region,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
+        # Exemplo usando Anthropic Claude v2 (ajuste o modelId conforme necessário)
+        body = {
+            "prompt": prompt,
+            "max_tokens_to_sample": 512,
+            "temperature": 0.2,
+            "top_k": 250,
+            "top_p": 1,
+            "stop_sequences": ["\n\n"]
+        }
+        response = bedrock.invoke_model(
+            modelId="anthropic.claude-v2",  # ajuste para o modelo desejado
+            body=json.dumps(body),
+            accept="application/json",
+            contentType="application/json"
+        )
+        result = json.loads(response["body"].read())
+        review = result.get("completion", "[ERRO] Não foi possível obter resposta da LLM Bedrock.")
+        return {"review": review}
+    except Exception as e:
+        return {"review": f"[ERRO] Falha ao acessar Bedrock: {str(e)}", "diff": diff_preview}
 
 # Adicione aqui seus endpoints para IA, por exemplo:
 # @app.post("/api/v1/python/predict", tags=["IA"])

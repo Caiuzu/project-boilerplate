@@ -1,0 +1,35 @@
+# Este workflow espera que a variável de ambiente BACKEND_URL esteja definida (ex: em secrets ou .env)
+# Exemplo de uso: BACKEND_URL=https://meu-backend.com
+name: Code Review LLM
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  codereview:
+    runs-on: ubuntu-latest
+    env:
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: Get PR diff
+        id: diff
+        run: |
+          git fetch origin main
+          git diff origin/main...HEAD > pr.diff
+      - name: Call LLM backend
+        run: |
+          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/codereview" -F diff=@pr.diff)
+          echo "$RESPONSE" > review.txt
+      - name: Fail if issues found
+        run: |
+          if grep -q "ERRO" review.txt; then
+            exit 1
+          fi
+      - name: Comment on PR
+        uses: peter-evans/create-or-update-comment@v3
+        with:
+          issue-number: ${{ github.event.pull_request.number }}
+          body: |
+            $(cat review.txt) 
