@@ -1,11 +1,9 @@
 fastapi
 uvicorn[standard]
 pydantic
-openai
-groq
-transformers
-huggingface-hub
-
+boto3
+PyGithub
+requests
 
 # Dependências para IA/ML (exemplos, descomente e adicione conforme necessário)
 # pandas
@@ -27,3 +25,8 @@ huggingface-hub
 # black
 # flake8
 # mypy 
+
+# openai
+# groq
+# transformers
+# huggingface-hub

@@ -13,23 +13,21 @@ jobs:
       BACKEND_URL: ${{ secrets.BACKEND_URL }}
     steps:
       - uses: actions/checkout@v3
-      - name: Get PR diff
-        id: diff
-        run: |
-          git fetch origin main
-          git diff origin/main...HEAD > pr.diff
       - name: Call LLM backend
+        id: call_backend
         run: |
-          RESPONSE=$(curl -s -X POST "$BACKEND_URL/api/codereview" -F diff=@pr.diff)
-          echo "$RESPONSE" > review.txt
+          RESPONSE=$(curl -s -w "%{http_code}" -o response.json -X POST "$BACKEND_URL/api/codereview" \
+            -H "Content-Type: application/json" \
+            -d '{"repo": "${{ github.repository }}", "pr_number": ${{ github.event.pull_request.number }}}')
+          echo "status=$RESPONSE" >> $GITHUB_OUTPUT
       - name: Fail if issues found
+        if: steps.call_backend.outputs.status == '409'
         run: |
-          if grep -q "ERRO" review.txt; then
-            exit 1
-          fi
+          cat response.json
+          exit 1
       - name: Comment on PR
         uses: peter-evans/create-or-update-comment@v3
         with:
           issue-number: ${{ github.event.pull_request.number }}
           body: |
-            $(cat review.txt) 
+            $(cat response.json) 

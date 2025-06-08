@@ -1,9 +1,12 @@
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import uvicorn
 import os
 import boto3
 import json
+from github import Github
+import requests
 
 try:
     from openai import OpenAI
@@ -31,6 +34,10 @@ class Item(BaseModel):
     id: int
     name: str
     description: str | None = None
+
+class PRRequest(BaseModel):
+    repo: str  # Ex: "org/nome-repo"
+    pr_number: int
 
 @app.get("/api/hello", response_model=HelloMessage, tags=["Exemplo Python"])
 async def read_root():
@@ -94,24 +101,40 @@ async def chat_huggingface(prompt: str, model: str = "gpt2"):
     return {"response": result[0]["generated_text"]}
 
 @app.post("/api/codereview", tags=["Code Review"])
-async def codereview(diff: UploadFile = File(...)):
+async def codereview(data: PRRequest):
     """
-    Recebe um diff de PR do GitHub, estrutura o prompt e retorna análise da LLM (Amazon Bedrock).
+    Recebe repo e pr_number, busca o diff da PR no GitHub, analisa com LLM (Bedrock) e retorna análise.
+    Retorna 409 se detectar anti-padrão, 200 se ok.
     """
-    diff_content = (await diff.read()).decode(errors="ignore")
+    github_token = os.getenv("GITHUB_TOKEN")
+    if not github_token:
+        raise HTTPException(status_code=500, detail="GITHUB_TOKEN não configurado no ambiente.")
+    # Buscar diff da PR
+    try:
+        g = Github(github_token)
+        repo = g.get_repo(data.repo)
+        pr = repo.get_pull(data.pr_number)
+        diff_url = pr.diff_url
+        diff_response = requests.get(diff_url, headers={"Authorization": f"token {github_token}"})
+        if diff_response.status_code != 200:
+            raise Exception(f"Erro ao buscar diff: {diff_response.text}")
+        diff_content = diff_response.text
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Erro ao buscar diff da PR: {str(e)}")
+    # Montar prompt focado em logs
     diff_preview = diff_content[:2000]
     prompt = (
         "Você é um especialista em observabilidade e FinOps para ambientes multicloud em grandes bancos. "
         "Analise apenas as alterações de LOGS no diff abaixo. Identifique desperdício, ruído, duplicidade, excesso de logs, spans inúteis e anti-padrões que aumentam custos ou dificultam o diagnóstico. "
         "Sugira correções, padronizações e formas de reduzir custos de observabilidade. Seja objetivo, cite exemplos do diff e responda em PT-BR.\n\n"
-        f"DIFF DE LOGS:\n{diff_preview}\n\nResumo e recomendações:" 
+        f"DIFF DE LOGS:\n{diff_preview}\n\nResumo e recomendações:"
     )
-    # Configurações AWS Bedrock
+    # Chamar Bedrock
     region = os.getenv("AWS_BEDROCK_REGION")
     access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
     secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
     if not (region and access_key and secret_key):
-        return {"review": "[PLACEHOLDER] AWS Bedrock não configurado. Defina AWS_BEDROCK_REGION, AWS_BEDROCK_ACCESS_KEY e AWS_BEDROCK_SECRET_KEY no ambiente.", "diff": diff_preview}
+        raise HTTPException(status_code=500, detail="AWS Bedrock não configurado.")
     try:
         bedrock = boto3.client(
             service_name="bedrock-runtime",
@@ -119,7 +142,6 @@ async def codereview(diff: UploadFile = File(...)):
             aws_access_key_id=access_key,
             aws_secret_access_key=secret_key
         )
-        # Exemplo usando Anthropic Claude v2 (ajuste o modelId conforme necessário)
         body = {
             "prompt": prompt,
             "max_tokens_to_sample": 512,
@@ -129,16 +151,22 @@ async def codereview(diff: UploadFile = File(...)):
             "stop_sequences": ["\n\n"]
         }
         response = bedrock.invoke_model(
-            modelId="anthropic.claude-v2",  # ajuste para o modelo desejado
+            modelId="anthropic.claude-v2",
             body=json.dumps(body),
             accept="application/json",
             contentType="application/json"
         )
         result = json.loads(response["body"].read())
         review = result.get("completion", "[ERRO] Não foi possível obter resposta da LLM Bedrock.")
+        # Palavras-chave para identificar anti-padrão
+        anti_padrao_keywords = [
+            "anti-padrão", "desperdício", "duplicidade", "excesso", "span inútil", "problema", "ruído", "logs desnecessários"
+        ]
+        if any(x in review.lower() for x in anti_padrao_keywords):
+            return JSONResponse(status_code=409, content={"review": review})
         return {"review": review}
     except Exception as e:
-        return {"review": f"[ERRO] Falha ao acessar Bedrock: {str(e)}", "diff": diff_preview}
+        raise HTTPException(status_code=500, detail=f"Erro ao acessar Bedrock: {str(e)}")
 
 # Adicione aqui seus endpoints para IA, por exemplo:
 # @app.post("/api/v1/python/predict", tags=["IA"])
