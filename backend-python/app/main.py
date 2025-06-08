@@ -1,3 +1,11 @@
+from dotenv import load_dotenv
+load_dotenv()
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s"
+)
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -7,6 +15,8 @@ import boto3
 import json
 from github import Github
 import requests
+import re
+from datetime import date, timedelta
 
 try:
     from openai import OpenAI
@@ -38,6 +48,44 @@ class Item(BaseModel):
 class PRRequest(BaseModel):
     repo: str  # Ex: "org/nome-repo"
     pr_number: int
+
+class FinOpsRequest(BaseModel):
+    message: str
+
+class FinOpsResponse(BaseModel):
+    text: str
+    type: str = None  # 'cost', 'alert', 'insight', 'dashboard'
+
+# Defina o modelId como constante
+BEDROCK_MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0"
+
+# Função auxiliar para invocar o modelo Bedrock
+def invoke_bedrock_model(prompt, region, access_key, secret_key):
+    logging.info(f"Invocando Bedrock modelId={BEDROCK_MODEL_ID}")
+    bedrock = boto3.client(
+        service_name="bedrock-runtime",
+        region_name=region,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key
+    )
+    body = {
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "max_tokens": 512,
+        "temperature": 0.2,
+        "top_p": 1,
+        "anthropic_version": "bedrock-2023-05-31"
+    }
+    response = bedrock.invoke_model(
+        modelId=BEDROCK_MODEL_ID,
+        body=json.dumps(body),
+        accept="application/json",
+        contentType="application/json"
+    )
+    result = json.loads(response["body"].read())
+    logging.info(f"Resposta bruta do Bedrock: {result}")
+    return result["content"][0]["text"] if "content" in result and result["content"] else result.get("completion", "[ERRO] Não foi possível obter resposta da LLM Bedrock.")
 
 @app.get("/api/hello", response_model=HelloMessage, tags=["Exemplo Python"])
 async def read_root():
@@ -119,7 +167,9 @@ async def codereview(data: PRRequest):
         if diff_response.status_code != 200:
             raise Exception(f"Erro ao buscar diff: {diff_response.text}")
         diff_content = diff_response.text
+        logging.info(f"Diff da PR obtido com sucesso para {data.repo} PR #{data.pr_number}")
     except Exception as e:
+        logging.error(f"Erro ao buscar diff da PR: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao buscar diff da PR: {str(e)}")
     # Montar prompt focado em logs
     diff_preview = diff_content[:2000]
@@ -129,44 +179,149 @@ async def codereview(data: PRRequest):
         "Sugira correções, padronizações e formas de reduzir custos de observabilidade. Seja objetivo, cite exemplos do diff e responda em PT-BR.\n\n"
         f"DIFF DE LOGS:\n{diff_preview}\n\nResumo e recomendações:"
     )
-    # Chamar Bedrock
+    try:
+        review = invoke_bedrock_model(prompt, region, access_key, secret_key)
+    except Exception as e:
+        logging.error(f"Erro ao acessar Bedrock: {e}")
+        raise HTTPException(status_code=500, detail=f"Erro ao acessar Bedrock: {str(e)}")
+    # Palavras-chave para identificar anti-padrão
+    anti_padrao_keywords = [
+        "anti-padrão", "desperdício", "duplicidade", "excesso", "span inútil", "problema", "ruído", "logs desnecessários"
+    ]
+    if any(x in review.lower() for x in anti_padrao_keywords):
+        return JSONResponse(status_code=409, content={"review": review})
+    return {"review": review}
+
+@app.post("/api/finopsgpt", response_model=FinOpsResponse, tags=["FinOpsGPT"])
+async def finops_gpt(data: FinOpsRequest):
+    """
+    Endpoint FinOpsGPT: recebe uma pergunta, busca dados AWS (Cost Explorer, CloudWatch), monta prompt, chama Bedrock e retorna resposta e tipo.
+    """
     region = os.getenv("AWS_BEDROCK_REGION")
     access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
     secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
+    logging.info(f"AWS_BEDROCK_REGION: {region}")
+    logging.info(f"AWS_BEDROCK_ACCESS_KEY: {'SET' if access_key else 'NOT SET'}")
+    logging.info(f"AWS_BEDROCK_SECRET_KEY: {'SET' if secret_key else 'NOT SET'}")
     if not (region and access_key and secret_key):
+        missing = []
+        if not region:
+            missing.append('AWS_BEDROCK_REGION')
+        if not access_key:
+            missing.append('AWS_BEDROCK_ACCESS_KEY')
+        if not secret_key:
+            missing.append('AWS_BEDROCK_SECRET_KEY')
+        logging.error(f"Variáveis de ambiente ausentes: {', '.join(missing)}")
         raise HTTPException(status_code=500, detail="AWS Bedrock não configurado.")
+    # Inicializar boto3 para Cost Explorer e CloudWatch
+    ce = boto3.client(
+        'ce',
+        region_name=region,
+        aws_access_key_id=access_key,
+        aws_secret_access_key=secret_key
+    )
+    # 1. Custo total do mês
     try:
-        bedrock = boto3.client(
-            service_name="bedrock-runtime",
-            region_name=region,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key
+        today = date.today()
+        start = today.replace(day=1).isoformat()
+        end = today.isoformat()
+        logging.info(f"Consultando Cost Explorer: {start} até {end}")
+        cost_data = ce.get_cost_and_usage(
+            TimePeriod={'Start': start, 'End': end},
+            Granularity='MONTHLY',
+            Metrics=['UnblendedCost']
         )
-        body = {
-            "prompt": prompt,
-            "max_tokens_to_sample": 512,
-            "temperature": 0.2,
-            "top_k": 250,
-            "top_p": 1,
-            "stop_sequences": ["\n\n"]
-        }
-        response = bedrock.invoke_model(
-            modelId="anthropic.claude-v2",
-            body=json.dumps(body),
-            accept="application/json",
-            contentType="application/json"
-        )
-        result = json.loads(response["body"].read())
-        review = result.get("completion", "[ERRO] Não foi possível obter resposta da LLM Bedrock.")
-        # Palavras-chave para identificar anti-padrão
-        anti_padrao_keywords = [
-            "anti-padrão", "desperdício", "duplicidade", "excesso", "span inútil", "problema", "ruído", "logs desnecessários"
-        ]
-        if any(x in review.lower() for x in anti_padrao_keywords):
-            return JSONResponse(status_code=409, content={"review": review})
-        return {"review": review}
+        total_cost = float(cost_data['ResultsByTime'][0]['Total']['UnblendedCost']['Amount'])
+        total_cost_str = f"R$ {total_cost:,.2f}".replace(",", ".")
+        logging.info(f"Custo total do mês: {total_cost_str}")
     except Exception as e:
+        logging.error(f"Erro ao consultar Cost Explorer (custo total): {e}")
+        total_cost = 0
+        total_cost_str = "N/A"
+    # 2. Top 3 serviços por custo
+    try:
+        logging.info(f"Consultando Cost Explorer (top serviços): {start} até {end}")
+        cost_data_services = ce.get_cost_and_usage(
+            TimePeriod={'Start': start, 'End': end},
+            Granularity='MONTHLY',
+            Metrics=['UnblendedCost'],
+            GroupBy=[{'Type': 'DIMENSION', 'Key': 'SERVICE'}]
+        )
+        top_services = sorted(
+            [
+                (item['Keys'][0], float(item['Metrics']['UnblendedCost']['Amount']))
+                for item in cost_data_services['ResultsByTime'][0]['Groups']
+            ],
+            key=lambda x: x[1],
+            reverse=True
+        )[:3]
+        top_services_str = ', '.join([f'{name} (R$ {value:,.2f})' for name, value in top_services])
+        logging.info(f"Top serviços: {top_services_str}")
+    except Exception as e:
+        logging.error(f"Erro ao consultar Cost Explorer (top serviços): {e}")
+        top_services_str = "N/A"
+    # 3. Alertas CloudWatch em ALARM
+    try:
+        logging.info("Consultando CloudWatch (alarmes em ALARM)")
+        cw = boto3.client('cloudwatch', region_name=region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+        alarms = cw.describe_alarms(StateValue='ALARM')
+        alertas = [a['AlarmName'] for a in alarms.get('MetricAlarms', [])]
+        alertas_str = ', '.join(alertas[:5]) if alertas else 'Nenhum alerta crítico recente'
+        logging.info(f"Alertas recentes: {alertas_str}")
+    except Exception as e:
+        logging.error(f"Erro ao consultar CloudWatch: {e}")
+        alertas_str = "N/A"
+    # 4. Insight: aumento de custo >30% mês a mês
+    insight = None
+    try:
+        first_day_this_month = date.today().replace(day=1)
+        last_day_last_month = first_day_this_month - timedelta(days=1)
+        start_last = last_day_last_month.replace(day=1).isoformat()
+        end_last = last_day_last_month.isoformat()
+        logging.info(f"Consultando Cost Explorer (mês anterior): {start_last} até {end_last}")
+        cost_last = ce.get_cost_and_usage(
+            TimePeriod={'Start': start_last, 'End': end_last},
+            Granularity='MONTHLY',
+            Metrics=['UnblendedCost']
+        )
+        total_last = float(cost_last['ResultsByTime'][0]['Total']['UnblendedCost']['Amount'])
+        if total_last > 0 and total_cost > 0:
+            aumento = (total_cost - total_last) / total_last * 100
+            if aumento > 30:
+                insight = f"Custo total subiu {aumento:.1f}% em relação ao mês anterior."
+        logging.info(f"Insight: {insight}")
+    except Exception as e:
+        logging.error(f"Erro ao calcular insight de aumento de custo: {e}")
+    # Montar contexto
+    contexto = (
+        f"Custo total do mês: {total_cost_str}\n"
+        f"Top serviços: {top_services_str}\n"
+        f"Alertas recentes: {alertas_str}\n"
+    )
+    if insight:
+        contexto += f"Insight: {insight}\n"
+    # Montar prompt
+    prompt = (
+        "Você é um assistente FinOps especializado em nuvem AWS. Responda em PT-BR, de forma clara e objetiva.\n"
+        f"Pergunta do usuário: \"{data.message}\"\n"
+        f"Contexto de custos e recursos:\n{contexto}\n"
+        "Classifique sua resposta como um dos tipos: 'cost', 'alert', 'insight' ou 'dashboard'.\n"
+        "No final da resposta, escreva: [type: cost] (ou outro tipo)."
+    )
+    try:
+        llm_response = invoke_bedrock_model(prompt, region, access_key, secret_key)
+    except Exception as e:
+        logging.error(f"Erro ao acessar Bedrock: {e}")
         raise HTTPException(status_code=500, detail=f"Erro ao acessar Bedrock: {str(e)}")
+    # Extrair type
+    match = re.search(r"\[type:\s*(cost|alert|insight|dashboard)\]", llm_response, re.IGNORECASE)
+    if match:
+        type_ = match.group(1).lower()
+        text = llm_response[:match.start()].strip()
+    else:
+        type_ = None
+        text = llm_response.strip()
+    return FinOpsResponse(text=text, type=type_)
 
 # Adicione aqui seus endpoints para IA, por exemplo:
 # @app.post("/api/v1/python/predict", tags=["IA"])
