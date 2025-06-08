@@ -1,6 +1,7 @@
 from dotenv import load_dotenv
 load_dotenv()
 import logging
+from fastapi.middleware.cors import CORSMiddleware
 
 logging.basicConfig(
     level=logging.INFO,
@@ -35,6 +36,15 @@ app = FastAPI(
     title="Hackathon Python API Example",
     version="1.0.0",
     description="API de exemplo em FastAPI para pipelines de IA e outros serviços Python."
+)
+
+# Configuração de CORS para permitir requisições do frontend
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # ou especifique ["http://localhost:3000"] para mais seguro
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"]
 )
 
 class HelloMessage(BaseModel):
@@ -193,7 +203,7 @@ async def codereview(data: PRRequest):
         return JSONResponse(status_code=409, content={"review": review})
     return {"review": review}
 
-@app.post("/api/finopsgpt", response_model=AIResponse, tags=["FinOpsGPT"])
+@app.post("/api/message", response_model=AIResponse, tags=["FinOpsGPT"])
 async def finops_gpt(data: FinOpsRequest):
     """
     Endpoint FinOpsGPT: recebe uma pergunta, busca dados AWS (Cost Explorer, CloudWatch), monta prompt, chama Bedrock e retorna resposta e tipo.
@@ -306,63 +316,103 @@ async def finops_gpt(data: FinOpsRequest):
 Você é o <b>FinOpsGPT</b>, copiloto da plataforma <u>FOG — FinOps &amp; Observability Guardian</u>, especializado em ambientes AWS multicloud.
 Responda em <b>PT-BR</b>, de forma <i>clara</i>, <i>objetiva</i> e <b>sempre</b> em um <u>único bloco de HTML puro</u>, pronto para renderizar no navegador.
 
+<!-- ======= PALETA DE CORES FOG ======= -->
+<ul style="display:none;">
+  <li><b>Laranja Itaú (primária):</b> #ff6900</li>
+  <li><b>Azul escuro (títulos):</b> #1d3557</li>
+  <li><b>Azul médio (detalhes):</b> #457b9d</li>
+  <li><b>Verde (positivo):</b> #2a9d8f</li>
+  <li><b>Vermelho (alerta):</b> #e63946</li>
+  <li><b>Amarelo (atenção):</b> #f77f00</li>
+  <!-- ESCALA DE CINZAS (usar nestings) -->
+  <li><b>Cinza escuro 2:</b> #777777</li>
+  <li><b>Cinza escuro 1:</b> #858585</li>
+  <li><b>Cinza base (cartão raiz):</b> #929293</li>
+  <li><b>Cinza claro 1:</b> #a0a0a0</li>
+  <li><b>Cinza claro 2:</b> #adadad</li>
+  <li><b>Texto principal:</b> #222222</li>
+</ul>
+<p style="display:none;">
+  Use sempre o cinza base #929293 como fundo do cartão raiz.
+  Para cada nível aninhado, alterne entre cinza-claro-1 (#a0a0a0) e cinza-escuro-1 (#858585) para garantir contraste.
+  Nunca use branco puro (#ffffff).
+  Use o laranja #ff6900 para botões, títulos principais e ícones de ação.
+  Use o azul escuro #1d3557 para títulos e cabeçalhos.
+  Use o azul médio #457b9d para detalhes, links e gráficos.
+  Use o verde #2a9d8f para valores positivos e metas atingidas.
+  Use o vermelho #e63946 para alertas, erros e avisos.
+  Use o amarelo #f77f00 para alertas de atenção ou variações.
+  Use o cinza escuro #222222 para textos principais.
+</p>
+
 <!-- ======= REGRAS DE FORMATAÇÃO ======= -->
-<ul style=\"display:none;\">
+<ul style="display:none;">
   <li>Use <b>apenas</b> tags HTML: div, h3, b, i, u, span, ul, li, table, tr, td, br, p, etc.</li>
   <li>Jamais utilize Markdown ou quebras "n" — use <br/> ou outras tags.</li>
   <li>Texto <b>nunca</b> deve ficar fora de tags; o marcador de tipo deve ser um comentário HTML.</li>
   <li>Utilize CSS inline simples ou classes pré-existentes (ex.: <span class='llm-alert'>).</li>
-  <li>Seja visual e sucinto; cores de alto contraste (#e63946, #457b9d, #2a9d8f…).</li>
+  <li>Seja visual e sucinto; use as cores da paleta FOG para alto contraste.</li>
+  <li><b>Proibição absoluta</b> de #ffffff.</li>
+  <li>Cartão raiz → background:#929293.<br/>
+      Para cada nível aninhado, escolha cinza-claro-1 (#a0a0a0) ou cinza-escuro-1 (#858585)<br/>
+      (alternar claro/escuro garante contraste interno).</li>
+  <li>Alertas, badges ou ícones seguem a paleta de cor correspondente (verde/vermelho/laranja/amarelo).</li>
+  <li>CSS inline simples; classes só se pré-existirem.</li>
 </ul>
 
 <!-- ======= CONTEXTO DE NEGÓCIO ======= -->
-<p style=\"display:none;\">
+<p style="display:none;">
   Metas FOG: reduzir 30% custos de observabilidade, detectar spans inúteis < 10 min, eliminar recursos zumbis.
   Sempre ofereça recomendações práticas (ex.: lifecycle S3, migração Spot, reduzir nível de log).
 </p>
 
 <!-- ======= EXEMPLOS DE SAÍDA ======= -->
-<div style=\"display:none;\">
-  <p><b style=\"color:#e63946;\">⚠️ Alerta Ativo:</b><br/>
-     <span style=\"font-weight:600;\">Gasto do serviço <span style=\"color:#f77f00;\">S3</span> ultrapassou <u>15% da meta mensal</u>!</span>
-  </p>
-  <ul>
-    <li><b>Atual:</b> <span style=\"color:#457b9d;\">R$ 3.750</span></li>
-    <li><b>Meta:</b> <span style=\"color:#2a9d8f;\">R$ 3.200</span></li>
-  </ul>
-  <i>Recomendo revisar políticas de lifecycle e storage classes.</i>
-  <!-- type: alert -->
+<div style="display:none;">
+  <div style="background:#929293; padding:16px; border-radius:8px;">
+    <p><b style="color:#e63946;">⚠️ Alerta Ativo:</b><br/>
+       <span style="font-weight:600;">Gasto do serviço <span style="color:#f77f00;">S3</span> ultrapassou <u>15% da meta mensal</u>!</span>
+    </p>
+    <ul>
+      <li><b>Atual:</b> <span style="color:#457b9d;">R$ 3.750</span></li>
+      <li><b>Meta:</b> <span style="color:#2a9d8f;">R$ 3.200</span></li>
+    </ul>
+    <i>Recomendo revisar políticas de lifecycle e storage classes.</i>
+    <!-- type: alert -->
+  </div>
 </div>
 
-<div style=\"display:none;\">
-  <h3>Resumo de Custos</h3>
-  <table style=\"width:100%; border-collapse:collapse;\">
-    <tr style=\"background:#f8f9fa;\;\">
-      <th style=\"padding:8px; text-align:left;\">Serviço</th>
-      <th style=\"padding:8px; text-align:right;\">Custo</th>
-      <th style=\"padding:8px; text-align:right;\">% do Total</th>
-    </tr>
-    <tr><td><b>AWS CloudTrail</b></td><td style=\"text-align:right;\">R$ 0,12</td><td style=\"text-align:right;\">46,2%</td></tr>
-    <tr><td><b>Amazon Bedrock</b></td><td style=\"text-align:right;\">R$ 0,08</td><td style=\"text-align:right;\">30,8%</td></tr>
-    <tr><td><b>Amazon SageMaker</b></td><td style=\"text-align:right;\">R$ 0,05</td><td style=\"text-align:right;\">19,2%</td></tr>
-    <tr style=\"background:#f8f9fa;\"><td><b>Total do Mês</b></td><td style=\"text-align:right;\"><b>R$ 0,26</b></td><td style=\"text-align:right;\">100%</td></tr>
-  </table>
-  <p style=\"margin-top:10px;\"><i>Apesar do aumento percentual (563,8 %), o valor absoluto segue baixo, possivelmente por uso inicial.</i></p>
-  <!-- type: cost -->
+<div style="display:none;">
+  <div style="background:#929293; padding:16px; border-radius:8px;">
+    <h3 style="color:#1d3557;">Resumo de Custos</h3>
+    <table style="width:100%; border-collapse:collapse; background:#858585;">
+      <tr>
+        <th style="padding:8px; text-align:left; color:#1d3557;">Serviço</th>
+        <th style="padding:8px; text-align:right; color:#1d3557;">Custo</th>
+        <th style="padding:8px; text-align:right; color:#1d3557;">% do Total</th>
+      </tr>
+      <tr><td><b>AWS CloudTrail</b></td><td style="text-align:right;">R$ 0,12</td><td style="text-align:right;">46,2%</td></tr>
+      <tr><td><b>Amazon Bedrock</b></td><td style="text-align:right;">R$ 0,08</td><td style="text-align:right;">30,8%</td></tr>
+      <tr><td><b>Amazon SageMaker</b></td><td style="text-align:right;">R$ 0,05</td><td style="text-align:right;">19,2%</td></tr>
+      <tr><td><b>Total do Mês</b></td><td style="text-align:right;"><b>R$ 0,26</b></td><td style="text-align:right;">100%</td></tr>
+    </table>
+    <p style="margin-top:10px;"><i>Apesar do aumento percentual (563,8 %), o valor absoluto segue baixo, possivelmente por uso inicial.</i></p>
+    <!-- type: cost -->
+  </div>
 </div>
 
 <!-- ======= INSTRUÇÕES FINAIS ======= -->
-<p style=\"display:none;\">
+<p style="display:none;">
   Classifique a resposta como: <b>cost</b>, <b>alert</b>, <b>insight</b> ou <b>dashboard</b>.
-  Insira <b>apenas um</b> comentário HTML no final indicando o tipo — ex.: <!- - type: cost -->.
+  Insira <b>apenas um</b> comentário HTML no final indicando o tipo — ex.: <!-- type: cost -->.
 </p>
 
 <!-- ======= ENTRADA DINÂMICA ======= -->
-<h3 style=\"color:#1d3557;\">Pergunta do usuário:</h3>
-<p style=\"font-size:1.1em; color:#222;\">{data.content}</p>
-<p style=\"display:none;\">Contexto:<br/>{contexto}</p>
-
-<p><b>Responda diretamente à pergunta acima, usando os dados e contexto fornecidos. Nunca ignore a pergunta do usuário.</b></p>
+<div style="background:#929293; padding:16px; border-radius:8px;">
+  <h3 style="color:#1d3557;">Pergunta do usuário:</h3>
+  <p style="font-size:1.1em; color:#222;">{data.content}</p>
+  <p style="display:none;">Contexto:<br/>{contexto}</p>
+  <p><b>Responda diretamente à pergunta acima, usando os dados e contexto fornecidos. Nunca ignore a pergunta do usuário.</b></p>
+</div>
 """
     try:
         llm_response = invoke_bedrock_model(prompt, region, access_key, secret_key)
@@ -377,6 +427,12 @@ Responda em <b>PT-BR</b>, de forma <i>clara</i>, <i>objetiva</i> e <b>sempre</b>
     else:
         type_ = "default"
         text = llm_response.strip()
+    # Garante que a resposta sempre venha encapsulada em uma <div class='llm-root'>...</div>
+    text = text.strip()
+    # Remove qualquer wrapper <div ...> externo
+    text = re.sub(r"^<div[^>]*>(.*)</div>$", r"\1", text, flags=re.DOTALL)
+    # Sempre encapsula corretamente
+    text = f"<div class='llm-root'>{text}</div>"
     return AIResponse(content=text, type=type_)
 
 # Adicione aqui seus endpoints para IA, por exemplo:
@@ -392,4 +448,4 @@ if __name__ == "__main__":
     # Este bloco é útil para rodar localmente com `python app/main.py`
     # Para produção, use um servidor ASGI como Uvicorn ou Hypercorn diretamente.
     # Ex: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    uvicorn.run(app, host="0.0.0.0", port=8005) 

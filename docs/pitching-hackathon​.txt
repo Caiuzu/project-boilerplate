@@ -1,0 +1,268 @@
+Boa tarde pessoal, primeiro de tudo obrigado por se chamar Caio Souza
+Então, nosso desafio escolhido foi o de finops e observabilidade
+Entendemos com o time Itaú e com a ajuda da AWS
+Que no cenário atual, onde tem 12 mil contas com diversos repositórios
+E o principal ofensor está sendo o custo de CloudWatch
+Pensamos em três produtos, não quero usar a palavra produtos na verdade
+Três entregas para poder resolver esse problema
+Primeiro, para evitar que esse backlog de produtos sem padrão
+É importante falar de padrão, padrão é um negócio importante
+Esses produtos, esses codebases sem padrão, despadronizados
+A gente criou um API que chama um Lambda
+No qual ele se conecta com o Bedrock
+E a API no nosso exemplo do GitHub
+Para avaliar o codebase e o diff que está sendo inserido
+Então, olhando para esse diff
+O LLM e o contexto que a gente fornece
+Vai entender se aqueles logs estão sendo muito errados
+Ou não deveriam estar dentro do padrão
+Primeiro de tudo
+Ou se eles podem causar um problema
+Vou dar um exemplo
+Eu tenho uma controller que é chamada
+10 mil vezes por segundo
+E eu coloquei dois logs a mais nela
+Talvez
+Essa parte da pipe não vai deixar
+E vai sugerir
+Outro tipo de
+De forma de avaliar
+Ou uma forma mais resumida
+Ou ele está fora do padrão
+O segundo produto
+Voltando ainda no primeiro produto
+A vantagem que ele traz
+É que a gente consegue congelar esse backlog
+E trazer um padrão
+Que o Itaú pode seguir
+Em tudo que a gente está
+Está atuando
+Já
+Para o nosso segundo produto
+Nossa segunda entrega
+Seria um chat
+Bot
+No qual vai
+Fornecer uma
+Interação humanizada
+Para os gestores
+Para os engenheiros
+Para as pessoas que estão
+Que tem capacidade de tomar decisão
+E
+Esse chat
+Ele
+Vai ter todo o contexto
+Do CMDB
+Da
+Da
+Do Itaú
+Dos code bases
+Das informações de billing
+Das estatísticas e métricas
+Que estão no CloudWatch
+Para trazer informações relevantes
+Para tomar decisão
+Então
+Vamos supor
+Nossa
+Qual é
+Quais são as tendências
+Do meu time
+Então ele vai
+Seu time tem
+Essas
+Dez contas
+De uma forma que a gente centraliza
+Todas as informações
+Então
+Programas de ter 12 mil contas
+Ele é um pouco
+E as informações estarem pulverizadas
+Ele é reduzido um pouco
+Inclusive
+Permitindo que a gente
+Adicione
+Informações multi-cloud
+Também
+Não só
+Da AWS
+Mas
+Quaisquer outras clouds
+Podem
+Se integrá-los ali
+E trazer
+Para esse chat
+Também
+Entendimento
+De custo
+Delas
+E
+Então eu vou fazer uma pergunta
+Qual são os mais ofensores
+Então eu falo
+No seu time
+Que tem essas contas
+Nessas clouds
+Nos últimos 6 meses
+Você subiu a sua nova feature
+E
+Ela tem um job
+Que roda
+Cada
+X tempo
+E ele está
+Sendo
+E ele tem muitos logs
+Então ele está sendo
+O maior ofensor
+É
+Então
+Ou ele está com um crescimento
+Um crescimento muito
+Ele está com um crescimento
+Acima do
+Do normal
+E ele
+E o seu budget
+Daqui a
+X tempo
+Vai
+É
+Vai ser tanto
+Vai estourar
+O seu budget
+Vai ser
+Violado
+Violado
+Não é a palavra
+Que eu quero
+Enfim
+Depois disso
+Deixa eu dar
+Push
+Na minha PR
+Depois disso
+É
+A gente tem
+O último produto
+Terceiro produto
+Que é
+De forma proativa
+A análise
+Esse aí
+A gente nem começou
+A fazer isso
+Mas que é a análise
+Do
+De tendências
+E de forma proativa
+Abertura de PRs
+Que
+Para os times
+Então a ideia
+É que
+Seja feita também
+A avaliação
+De quais são os maiores
+Ofensores
+Então
+O seu time
+Ele vai abrir
+A BR
+Falando assim
+Olha
+No seu time
+Você tem aqui
+Esses 10 arquivos
+Que
+São responsáveis
+Por 80%
+Do seu custo
+De CloudWatch
+E aí
+Essa PR
+Vai ser aberta
+Com sugestões
+Com melhorias
+E a proposta
+E a proposta
+É que não
+Para reduzir
+O tempo
+Necessário
+Que os engenheiros
+Vão gastar
+Fazendo esse
+Tendo esse retrabalho
+De padronizar
+De colocar no padrão
+E
+Otimizar
+Isso ao máximo
+Então
+Juntando as métricas
+Do CloudWatch
+Ele vai ver
+Olha
+Aqui eu vi que
+Essa controle
+Nesse arquivo
+É
+É a que mais
+Tem logs
+Então
+Ele já abre
+A PR corrigindo
+E o engenheiro
+Ele não precisa
+Necessariamente
+Fazer todo o trabalho
+Ele vai só revisar
+Se necessário
+Fazer algum ajuste
+Mas você otimiza
+O tempo
+Dos engenheiros
+E
+Isso em conjunto
+Com
+O chat
+Que vai
+Fornecer
+Ferramentas
+Para os tomadores
+De decisões
+Saberem
+Ah
+Eu tenho
+Seis meses
+Até meu budget
+É
+Até o passado
+No limite
+Do budget
+Então
+Eu
+É
+E eu sei
+Que eu tenho
+Dez PR
+Que foram abertas
+Como que eu organizo
+Meu backlog
+Para que essas
+Dez PR
+Possam ser atendidas
+Dentro desse
+Dentro desse
+Não dei paixa
+Eu não comitei
+Dentro desse
+Período
+E são esses três
+Produtos que a gente pensou
+Dúvidas?
+Tchau
+Tchau
+Tchau
